@@ -58,41 +58,43 @@ async def hybrid_parsing(url: str) -> dict:
     return video_stream, video_stream_hq, music, caption, video_hq
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    message_type: str = update.message.chat.type
-    text: str = update.message.text
+    """Handles incoming messages and processes TikTok URLs."""
 
-    print(f'User ({update.message.chat.id}) in {message_type}: "{text}"')
-    if message_type == 'group':
-        if BOT_USERNAME in text:
-            new_text: str = text.replace(BOT_USERNAME, '').strip()
-        else:
-            return
-    elif message_type == 'private':
+    message_type = update.message.chat.type
+    text = update.message.text
+
+    print(f"User ({update.message.chat.id}) in {message_type}: {text}")
+
+    if message_type == "private":
         if "tiktok.com" in text:
+            try:
+                video_data = await hybrid_parsing(text)  # Retrieve combined data
 
-            result = await hybrid_parsing(text)
+                if video_data:
+                    video_stream = video_data["video_stream"]
+                    music_url = video_data["music_url"]
+                    caption = video_data["caption"]
 
-            if result:
-                video = result[0]
-                video_hq = result[1]
-                music = result[2]
-                caption = result[3]
-                link =  result[4]
-                text = "Link:\n" + link + "\n\n" + "Sound:\n" + music + "\n\n" + "Caption:\n" + caption
-                text_link = "Video is too large, sending link instead" + "\n\n" + "Link:\n" + link + "\n\n" + "Sound:\n" + music + "\n\n" + "Caption:\n" + caption
+                    text = f"Link:\n{text}\n\nSound:\n{music_url}\n\nCaption:\n{caption}"
 
-                try:
-                    await update.message.reply_video(video=InputFile(video_hq), caption=text)
-                except Exception as e:
-                    if "Request Entity Too Large (413)" in str(e):
-                        print("Video is too large, sending link instead")
-                        await update.message.reply_text(text_link)
-
-            else:
-                await update.message.reply_text("Please send only TikTok URL")
+                    try:
+                        await update.message.reply_video(
+                            video=InputFile(video_stream), caption=text
+                        )
+                    except Exception as e:
+                        if "Request Entity Too Large" in str(e):
+                            await update.message.reply_text(
+                                "Video is too large, sending link instead." + text
+                            )
+                else:
+                    await update.message.reply_text("Please send only a TikTok URL.")
+            except Exception as e:
+                print(f"An error occurred: {str(e)}")
+                await update.message.reply_text(
+                    "Failed to process the TikTok link. Please try again later."
+                )
         else:
-            await update.message.reply_text("Please send a TikTok URL")
-            return
+            await update.message.reply_text("Please send a TikTok URL.")
 
 async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(f'Update {update} caused error {context.error}')
