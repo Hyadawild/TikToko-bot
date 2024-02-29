@@ -54,7 +54,7 @@ async def handle_message(event):
                 await event.reply("Please send only a TikTok URL.")
         except Exception as e:
             logging.error(f"An error occurred: {str(e)}")
-            await event.reply("Failed to process the TikTok link. Please try again later.")
+            await event.reply("Failed to process the TikTok link. Please try again later!!")
     else:
         await event.reply("Please send a TikTok URL in a private message.")
 
